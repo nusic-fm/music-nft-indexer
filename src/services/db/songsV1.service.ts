@@ -7,19 +7,24 @@ import {
   // documentId,
   doc,
   // getDoc,
-  setDoc,
-  // updateDoc,
+  addDoc,
+  updateDoc,
+  collection,
+  arrayUnion,
   // increment,
 } from "firebase/firestore";
-import { NusicSong } from "../../types/NusicSong";
+import { NftSong } from "../../types/NftSong";
+// import { NusicSong } from "../../types/NusicSong";
 import { db } from "../firebase.service";
 
-const addSongToDb = async (song: NusicSong) => {
-  const songId = `${song.tokenAddress}-${song.tokenId}`;
+const addSongToDb = async (song: NftSong): Promise<string> => {
+  const d = collection(db, "songs_v2");
+  const docRef = await addDoc(d, song);
+  return docRef.id;
+};
+const updateSongToDb = async (songId: string, tokenId: string) => {
   const d = doc(db, "songs_v1", songId);
-  await setDoc(d, {
-    ...song,
-  });
+  await updateDoc(d, { editionType: "Single", tokenIds: arrayUnion(tokenId) });
 };
 
-export { addSongToDb };
+export { addSongToDb, updateSongToDb };

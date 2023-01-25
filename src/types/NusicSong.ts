@@ -15,6 +15,8 @@ export interface ImageContent {
   posterUrl?: string | null;
   thumbnailUrl?: string | null;
 }
+export type EditionType = "Single" | "Multiple" | "Unknown";
+
 export interface NusicSong {
   name?: string | null;
   description?: string | null;
@@ -35,4 +37,5 @@ export interface NusicSong {
   bpm?: string | null;
   key?: string | null;
   tokenUrlMimeType?: string | null;
+  editionType: EditionType;
 }
