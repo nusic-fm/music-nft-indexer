@@ -1,9 +1,10 @@
 const admin = require("firebase-admin");
 const request = require("request");
-var serviceAccount = require("./nusic-player-2b3474d7e921.json");
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(
+    JSON.parse(process.env.FIREBASE_ADMIN_CERT as string)
+  ),
   storageBucket: process.env.STORAGE,
 });
 

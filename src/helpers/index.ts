@@ -56,8 +56,8 @@ export const getNusicTokenData = (token: any): NftTokenData => ({
       value: a.value,
     })) ?? [],
   original: {
-    imageUrl: createUrlFromCid(token.metadata?.animation_url) ?? null,
-    animationUrl: createUrlFromCid(token.metadata?.image) ?? null,
+    imageUrl: createUrlFromCid(token.metadata?.animation_url ?? "") ?? null,
+    animationUrl: createUrlFromCid(token.metadata?.image ?? "") ?? null,
   },
   imageSize: token.image?.size ?? null,
   imageMimeType: token.image?.mimeType ?? null,
@@ -111,7 +111,7 @@ export const getNusicSongModel = (
 });
 
 export const getAudioDataFromNft = async (tokenUri: string) => {
-  const response = await getDataFromCid(tokenUri);
+  const response = await getDataFromCid(tokenUri ?? "");
   if (response) {
     console.log("Got Response", response.data.name);
     const tokenMetadata = response.data;

@@ -15,7 +15,7 @@ import { NftCollectionData, NftTokenData } from "../../types/NftData";
 // import { NusicSong } from "../../types/NusicSong";
 import { db } from "../firebase.service";
 
-const DB_NAME = "nfts_v2";
+const DB_NAME = "nfts";
 
 const addNftToDb = async (nftAddress: string, nftData: NftCollectionData) => {
   const d = doc(db, DB_NAME, nftAddress);

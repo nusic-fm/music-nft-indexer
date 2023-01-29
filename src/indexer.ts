@@ -9,7 +9,7 @@ import axios from "axios";
 import fetchAndUpload from "./services/storage";
 import { createUrlFromCid } from "./helpers/nft";
 // import { EditionType, NusicSong } from "./types/NusicSong";
-import { addSongToDb, updateSongToDb } from "./services/db/songsV1.service";
+import { addSongToDb, updateSongToDb } from "./services/db/songs.service";
 import { getNftTransfersFromBlock } from "./helpers/moralis";
 import { getMusicNFTMetadata } from "./helpers/zora";
 import { getNftSongData, getNusicNftModel, getNusicTokenData } from "./helpers";
@@ -40,8 +40,9 @@ const REDIS_KEYS = {
 };
 
 export class MoralisIndexer {
-  public startBlock: number = 16412971;
-  public latestBlock: number = 16411946;
+  //15946075
+  public startBlock: number = 15945404;
+  public latestBlock: number = 15945404;
   // public blocks = [
   //   11565108, 16488663, 16494452, 13916084, 16503323, 16157168, 16341506,
   //   15440562, 16503193, 16322023,
@@ -180,19 +181,19 @@ export class MoralisIndexer {
     nftSongData.audioContent.streamUrl = lowQualityUrl;
     if (audioSize < 20) {
       if (orginalUrl) {
-        await fetchAndUpload(
-          orginalUrl,
-          `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/original`,
-          audioType
-        );
+        // await fetchAndUpload(
+        //   orginalUrl,
+        //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/original`,
+        //   audioType
+        // );
       }
       if (lowQualityUrl) {
         try {
-          await fetchAndUpload(
-            lowQualityUrl,
-            `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/stream-url`,
-            audioType
-          );
+          // await fetchAndUpload(
+          //   lowQualityUrl,
+          //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/stream-url`,
+          //   audioType
+          // );
         } catch (e: any) {
           nftSongData.nativeAudioUrl = true;
           console.log("Error in uploading audio file: ", e.message);
@@ -212,19 +213,19 @@ export class MoralisIndexer {
 
     if (imageSize < 20) {
       if (originalImageUrl) {
-        await fetchAndUpload(
-          originalImageUrl,
-          `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/original`,
-          imageType
-        );
+        // await fetchAndUpload(
+        //   originalImageUrl,
+        //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/original`,
+        //   imageType
+        // );
       }
       if (posterImageUrl) {
         try {
-          await fetchAndUpload(
-            posterImageUrl,
-            `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/poster`,
-            imageType
-          );
+          // await fetchAndUpload(
+          //   posterImageUrl,
+          //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/poster`,
+          //   imageType
+          // );
         } catch (e: any) {
           nftSongData.nativeAudioUrl = true;
           console.log("Error in uploading image file: ", e.message);
