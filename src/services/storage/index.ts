@@ -39,13 +39,21 @@ export async function getUrl(objectName: string): Promise<string> {
   try {
     const [url] = await bucket.file(objectName).getSignedUrl({
       action: "read",
+      expires: Date.now() + 1000 * 60 * 10,
     });
-    console.log({ url });
     return url;
   } catch (e: any) {
     console.log(e.message);
     return "";
   }
+}
+
+export async function streamFileDownload(objectName: string, res: any) {
+  return bucket.file(objectName).createReadStream().pipe(res); //stream is created
+}
+
+export async function fileDownload(objectName: string) {
+  return bucket.file(objectName).download(); //stream is created
 }
 
 export default fetchAndUpload;

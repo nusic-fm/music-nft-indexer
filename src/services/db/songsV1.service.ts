@@ -18,12 +18,12 @@ import { NftSong } from "../../types/NftSong";
 import { db } from "../firebase.service";
 
 const addSongToDb = async (song: NftSong): Promise<string> => {
-  const d = collection(db, "songs_v2");
+  const d = collection(db, "songs_v3");
   const docRef = await addDoc(d, song);
   return docRef.id;
 };
 const updateSongToDb = async (songId: string, tokenId: string) => {
-  const d = doc(db, "songs_v1", songId);
+  const d = doc(db, "songs_v3", songId);
   await updateDoc(d, { editionType: "Single", tokenIds: arrayUnion(tokenId) });
 };
 

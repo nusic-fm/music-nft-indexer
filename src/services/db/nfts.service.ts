@@ -16,7 +16,7 @@ import { NftCollectionData, NftTokenData } from "../../types/NftData";
 import { db } from "../firebase.service";
 
 const addNftToDb = async (nftAddress: string, nftData: NftCollectionData) => {
-  const d = doc(db, "nfts", nftAddress);
+  const d = doc(db, "nfts_v1", nftAddress);
   await setDoc(d, nftData);
 };
 
@@ -25,7 +25,7 @@ const addTokenToNftCollection = async (
   tokenId: string,
   tokenData: NftTokenData
 ) => {
-  const d = doc(db, "nfts", nftAddress, "tokens", tokenId);
+  const d = doc(db, "nfts_v1", nftAddress, "tokens", tokenId);
   await setDoc(d, tokenData);
 };
 

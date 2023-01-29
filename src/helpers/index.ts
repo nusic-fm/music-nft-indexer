@@ -11,18 +11,16 @@ export const getNftSongData = (token: IZoraData): NftSong => ({
   tokenId: token.tokenId,
   owner: token.owner,
   audioContent: {
-    tokenUrl: "",
     originalUrl: "",
     streamUrl: "",
-    animationUrl: "",
   },
   imageContent: {
-    tokenUrl: "",
     originalUrl: "",
     posterUrl: "",
-    thumbnailUrl: "",
-    streamUrl: "",
   },
+  nativeAudioUrl: false,
+  nativeImageUrl: false,
+
   //
   artist: (token.metadata as any)?.artist || "",
   bpm: (token.metadata as any)?.bpm || "",
@@ -37,10 +35,6 @@ export const getNusicNftModel = (token: IZoraData): NftCollectionData => ({
   tokenUri: token.tokenUrl ?? null,
   contractType: (token as any).tokenStandard ?? null,
   ownerAddress: token.owner ?? null,
-  imageContent: {
-    originalUrl: "",
-    posterUrl: "",
-  },
 });
 
 export const getNusicTokenData = (token: any): NftTokenData => ({
@@ -55,29 +49,25 @@ export const getNusicTokenData = (token: any): NftTokenData => ({
     toAddress: token.mintInfo?.toAddress,
   },
   animationUrl: token.metadata?.animation_url ?? null,
-  audioContent: {
-    tokenUrl: "",
-    originalUrl: "",
-    streamUrl: "",
-    animationUrl: "",
+  tokenUrlMimeType: token.tokenUrlMimeType,
+  attributes:
+    (token.attributes || token.metadata?.attributes)?.map((a: any) => ({
+      trait_type: a.trait_type,
+      value: a.value,
+    })) ?? [],
+  original: {
+    imageUrl: createUrlFromCid(token.metadata?.animation_url) ?? null,
+    animationUrl: createUrlFromCid(token.metadata?.image) ?? null,
   },
-  imageContent: {
-    tokenUrl: "",
-    originalUrl: "",
-    posterUrl: "",
-    thumbnailUrl: "",
-    streamUrl: "",
-  },
-  //
+  imageSize: token.image?.size ?? null,
+  imageMimeType: token.image?.mimeType ?? null,
+  audioSize: token.content?.size ?? null,
+  audioMimeType: token.content?.mimeType ?? null,
+  // Other data
   artist: token.metadata?.artist ?? null,
   bpm: token.metadata?.bpm ?? null,
   key: token.metadata?.key ?? null,
-  tokenUrlMimeType: token.tokenUrlMimeType,
-  attributes:
-    token.metadata?.attribute?.map((attribute: any) => ({
-      trait_type: attribute.trait_type,
-      value: attribute.value,
-    })) ?? [],
+  genre: token.metadata?.genre ?? null,
 });
 
 export const getNusicSongModel = (
@@ -163,3 +153,14 @@ export const getAudioDataFromNft = async (tokenUri: string) => {
 };
 
 // export default getAudioDataFromNft;
+export function formatBytes(bytes: number, decimals = 2) {
+  if (!+bytes) return "0 Bytes";
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}

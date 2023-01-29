@@ -8,6 +8,8 @@ export interface NftSong {
   tokenId: string;
   audioContent: AudioContent;
   imageContent: ImageContent;
+  nativeAudioUrl: boolean;
+  nativeImageUrl: boolean;
   owner?: string | null;
   artist?: string | null;
   bpm?: string | null;
