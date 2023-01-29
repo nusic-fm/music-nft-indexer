@@ -1,8 +1,8 @@
 require("dotenv").config();
 import express, { Application, Request, Response } from "express";
 import { MoralisIndexer } from "./indexer";
-import { fileDownload, getUrl, streamFileDownload } from "./services/storage";
-import https from "https";
+// import { fileDownload, getUrl, streamFileDownload } from "./services/storage";
+// import https from "https";
 
 const app: Application = express();
 const moralisInstance = new MoralisIndexer();
