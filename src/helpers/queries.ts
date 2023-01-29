@@ -1,6 +1,9 @@
 export const tokensQuery = `
-query MyQuery($where: [TokenInput!]) {
-    tokens(where: {tokens: $where}){
+query MyQuery($where: [TokenInput!] $endCursor: String) {
+    tokens(
+      where: {tokens: $where}
+      pagination: {limit: 100, after: $endCursor}
+      ){
     nodes{
         token{
             metadata
@@ -61,6 +64,10 @@ query MyQuery($where: [TokenInput!]) {
             tokenUrlMimeType
         
         }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
     }
     }
 }
