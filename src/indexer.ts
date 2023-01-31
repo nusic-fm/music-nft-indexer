@@ -219,8 +219,6 @@ export class MoralisIndexer {
     if (audioSize < 20) {
       if (orginaAudiolUrl) {
         assetObj.audioContent.originalUrl = orginaAudiolUrl;
-        assetObj.audioContent.audioType = audioType;
-        assetObj.audioContent.audioSize = audioSize;
         // await fetchAndUpload(
         //   orginalUrl,
         //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/original`,
@@ -229,8 +227,6 @@ export class MoralisIndexer {
       }
       if (lowQualityUrl) {
         assetObj.audioContent.streamUrl = lowQualityUrl;
-        assetObj.audioContent.audioType = audioType;
-        assetObj.audioContent.audioSize = audioSize;
         // try {
         //   // await fetchAndUpload(
         //   //   lowQualityUrl,
@@ -244,6 +240,8 @@ export class MoralisIndexer {
       } else {
         //TODO: Convert to low quality
       }
+      assetObj.audioContent.audioType = audioType;
+      assetObj.audioContent.audioSize = audioSize;
     } else {
       nftSongData.nativeAudioUrl = true;
     }
@@ -257,8 +255,6 @@ export class MoralisIndexer {
     if (imageSize < 20) {
       if (originalImageUrl) {
         assetObj.imageContent.originalUrl = originalImageUrl;
-        assetObj.imageContent.imageType = imageType;
-        assetObj.imageContent.imageSize = imageSize;
         // await fetchAndUpload(
         //   originalImageUrl,
         //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/original`,
@@ -267,8 +263,6 @@ export class MoralisIndexer {
       }
       if (posterImageUrl) {
         assetObj.imageContent.posterUrl = posterImageUrl;
-        assetObj.imageContent.imageType = imageType;
-        assetObj.imageContent.imageSize = imageSize;
         // try {
         //   // await fetchAndUpload(
         //   //   posterImageUrl,
@@ -283,6 +277,8 @@ export class MoralisIndexer {
     } else {
       nftSongData.nativeImageUrl = true;
     }
+    assetObj.imageContent.imageType = imageType;
+    assetObj.imageContent.imageSize = imageSize;
     try {
       const songId = await addSongToDb(nftSongData);
       await this.redisClient.hSet(
@@ -290,7 +286,7 @@ export class MoralisIndexer {
         REDIS_KEYS.songId,
         songId
       );
-      await addAssetToDb(assetObj);
+      await addAssetToDb(songId, assetObj);
       await this.redisClient.incr(REDIS_KEYS.noOfMusicNfts);
     } catch (e: any) {
       console.log("Error in addSongDb/assets: ", e.message);
