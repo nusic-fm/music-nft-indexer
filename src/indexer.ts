@@ -6,7 +6,7 @@ import { ZDK, ZDKNetwork, ZDKChain } from "@zoralabs/zdk";
 import axios from "axios";
 // import path from "path";
 // import { MediaType } from "@zoralabs/zdk/dist/queries/queries-sdk";
-import fetchAndUpload from "./services/storage";
+// import fetchAndUpload from "./services/storage";
 import { createUrlFromCid } from "./helpers/nft";
 // import { EditionType, NusicSong } from "./types/NusicSong";
 import { addSongToDb, updateSongToDb } from "./services/db/songs.service";
@@ -18,6 +18,7 @@ import {
   addTokenToNftCollection,
 } from "./services/db/nfts.service";
 import { IZoraData } from "./types/Zora";
+import { addAssetToDb } from "./services/db/assets.service";
 const redis = require("redis");
 
 const networkInfo = {
@@ -51,7 +52,12 @@ export class MoralisIndexer {
   // NFTs: 16411983
   // last stop: 16411995 -> 16411573 -> 16411543
   public musicNFTsLength: number = 0;
-  public redisClient: RedisClientType = redis.createClient();
+  public redisClient: RedisClientType = redis.createClient({
+    socket: {
+      host: process.env.REDIS_HOST,
+      port: process.env.REDIS_PORT,
+    },
+  });
   public zoraClient: ZDK;
 
   constructor(latestBlock?: number) {
@@ -157,7 +163,7 @@ export class MoralisIndexer {
 
   async storeSong(token: IZoraData) {
     const nftSongData = getNftSongData(token);
-    const orginalUrl = await createUrlFromCid(token.content?.url ?? "");
+    const orginaAudiolUrl = await createUrlFromCid(token.content?.url ?? "");
     const audioSize = Math.round(Number(token.content?.size) / 1048576); // 1048576
     const imageSize = Math.round(Number(token.image?.size) / 1048576);
     const audioType = token.content?.mimeType ?? "audio/mpeg";
@@ -170,17 +176,51 @@ export class MoralisIndexer {
       token.content?.url || ""
     );
 
-    if (!orginalUrl || !lowQualityUrl) {
+    if (!orginaAudiolUrl || !lowQualityUrl) {
       console.log(
         `Url not found for: ${token.collectionAddress} - ${
           token.tokenId
-        }. Original: ${!!orginalUrl}, Low: ${!!lowQualityUrl}`
+        }. Original: ${!!orginaAudiolUrl}, Low: ${!!lowQualityUrl}`
       );
     }
-    nftSongData.audioContent.originalUrl = orginalUrl;
+    nftSongData.audioContent.originalUrl = orginaAudiolUrl;
     nftSongData.audioContent.streamUrl = lowQualityUrl;
+    const assetObj: {
+      tokenAddress: string;
+      tokenId: string;
+      audioContent: {
+        originalUrl: string;
+        streamUrl: string;
+        audioType: string;
+        audioSize: number;
+      };
+      imageContent: {
+        originalUrl: string;
+        posterUrl: string;
+        imageType: string;
+        imageSize: number;
+      };
+    } = {
+      tokenAddress: nftSongData.tokenAddress,
+      tokenId: nftSongData.tokenId,
+      audioContent: {
+        originalUrl: "",
+        streamUrl: "",
+        audioType: "",
+        audioSize: -1,
+      },
+      imageContent: {
+        originalUrl: "",
+        posterUrl: "",
+        imageType: "",
+        imageSize: -1,
+      },
+    };
     if (audioSize < 20) {
-      if (orginalUrl) {
+      if (orginaAudiolUrl) {
+        assetObj.audioContent.originalUrl = orginaAudiolUrl;
+        assetObj.audioContent.audioType = audioType;
+        assetObj.audioContent.audioSize = audioSize;
         // await fetchAndUpload(
         //   orginalUrl,
         //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/original`,
@@ -188,16 +228,19 @@ export class MoralisIndexer {
         // );
       }
       if (lowQualityUrl) {
-        try {
-          // await fetchAndUpload(
-          //   lowQualityUrl,
-          //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/stream-url`,
-          //   audioType
-          // );
-        } catch (e: any) {
-          nftSongData.nativeAudioUrl = true;
-          console.log("Error in uploading audio file: ", e.message);
-        }
+        assetObj.audioContent.streamUrl = lowQualityUrl;
+        assetObj.audioContent.audioType = audioType;
+        assetObj.audioContent.audioSize = audioSize;
+        // try {
+        //   // await fetchAndUpload(
+        //   //   lowQualityUrl,
+        //   //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/stream-url`,
+        //   //   audioType
+        //   // );
+        // } catch (e: any) {
+        //   nftSongData.nativeAudioUrl = true;
+        //   console.log("Error in uploading audio file: ", e.message);
+        // }
       } else {
         //TODO: Convert to low quality
       }
@@ -213,6 +256,9 @@ export class MoralisIndexer {
 
     if (imageSize < 20) {
       if (originalImageUrl) {
+        assetObj.imageContent.originalUrl = originalImageUrl;
+        assetObj.imageContent.imageType = imageType;
+        assetObj.imageContent.imageSize = imageSize;
         // await fetchAndUpload(
         //   originalImageUrl,
         //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/original`,
@@ -220,16 +266,19 @@ export class MoralisIndexer {
         // );
       }
       if (posterImageUrl) {
-        try {
-          // await fetchAndUpload(
-          //   posterImageUrl,
-          //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/poster`,
-          //   imageType
-          // );
-        } catch (e: any) {
-          nftSongData.nativeAudioUrl = true;
-          console.log("Error in uploading image file: ", e.message);
-        }
+        assetObj.imageContent.posterUrl = posterImageUrl;
+        assetObj.imageContent.imageType = imageType;
+        assetObj.imageContent.imageSize = imageSize;
+        // try {
+        //   // await fetchAndUpload(
+        //   //   posterImageUrl,
+        //   //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/poster`,
+        //   //   imageType
+        //   // );
+        // } catch (e: any) {
+        //   nftSongData.nativeAudioUrl = true;
+        //   console.log("Error in uploading image file: ", e.message);
+        // }
       }
     } else {
       nftSongData.nativeImageUrl = true;
@@ -241,9 +290,10 @@ export class MoralisIndexer {
         REDIS_KEYS.songId,
         songId
       );
+      await addAssetToDb(assetObj);
       await this.redisClient.incr(REDIS_KEYS.noOfMusicNfts);
     } catch (e: any) {
-      console.log("Error in addSongDb: ", e.message);
+      console.log("Error in addSongDb/assets: ", e.message);
     }
   }
 
