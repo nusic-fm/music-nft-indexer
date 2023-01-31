@@ -42,8 +42,8 @@ const REDIS_KEYS = {
 
 export class MoralisIndexer {
   //15946075
-  public startBlock: number = 15945404;
-  public latestBlock: number = 15945404;
+  public startBlock: number = 15945387;
+  public latestBlock: number = 15945387;
   // public blocks = [
   //   11565108, 16488663, 16494452, 13916084, 16503323, 16157168, 16341506,
   //   15440562, 16503193, 16322023,
@@ -248,9 +248,9 @@ export class MoralisIndexer {
 
     // Image
     const originalImageUrl = await createUrlFromCid(token.image?.url ?? "");
-    const posterImageUrl = token.content?.mediaEncoding?.poster;
+    const posterImageUrl = token.image?.mediaEncoding?.poster;
     nftSongData.imageContent.originalUrl = originalImageUrl;
-    nftSongData.imageContent.posterUrl = originalImageUrl;
+    nftSongData.imageContent.posterUrl = posterImageUrl;
 
     if (imageSize < 20) {
       if (originalImageUrl) {
