@@ -196,6 +196,8 @@ export class MoralisIndexer {
         imageSize: -1,
       },
     };
+    assetObj.audioContent.audioType = audioType;
+    assetObj.audioContent.audioSize = audioSize;
     if (audioSize < 30) {
       if (orginaAudiolUrl) {
         assetObj.audioContent.originalUrl = orginaAudiolUrl;
@@ -206,8 +208,6 @@ export class MoralisIndexer {
         assetObj.audioContent.originalUrl = orginaAudiolUrl;
         //TODO: Convert to low quality
       }
-      assetObj.audioContent.audioType = audioType;
-      assetObj.audioContent.audioSize = audioSize;
     } else {
       nftSongData.nativeAudioUrl = true;
     }
@@ -218,6 +218,8 @@ export class MoralisIndexer {
     nftSongData.nativeContent.image.originalUrl = originalImageUrl;
     nftSongData.nativeContent.image.posterUrl = posterImageUrl;
 
+    assetObj.imageContent.imageType = imageType;
+    assetObj.imageContent.imageSize = imageSize;
     if (imageSize < 30) {
       if (originalImageUrl) {
         assetObj.imageContent.originalUrl = originalImageUrl;
@@ -228,8 +230,6 @@ export class MoralisIndexer {
     } else {
       nftSongData.nativeImageUrl = true;
     }
-    assetObj.imageContent.imageType = imageType;
-    assetObj.imageContent.imageSize = imageSize;
     try {
       const songId = await addSongToDb(nftSongData);
       await this.redisClient.hSet(
