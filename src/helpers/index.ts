@@ -61,8 +61,8 @@ export const getNusicTokenData = (token: any): NftTokenData => ({
       value: a.value,
     })) ?? [],
   original: {
-    imageUrl: createUrlFromCid(token.metadata?.animation_url ?? "") ?? null,
-    animationUrl: createUrlFromCid(token.metadata?.image ?? "") ?? null,
+    imageUrl: createUrlFromCid(token.metadata?.image ?? "") ?? null,
+    animationUrl: createUrlFromCid(token.metadata?.animation_url ?? "") ?? null,
   },
   imageSize: token.image?.size ?? null,
   imageMimeType: token.image?.mimeType ?? null,

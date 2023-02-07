@@ -115,7 +115,7 @@ export class MoralisIndexer {
     //Store the Subcollection in firebase
     try {
       await addTokenToDb(
-        `${newMusicNft.collectionAddress}:${newMusicNft.tokenId}`,
+        `${newMusicNft.collectionAddress}-${newMusicNft.tokenId}`,
         nusicTokenData
       );
     } catch (e: any) {
@@ -130,7 +130,7 @@ export class MoralisIndexer {
     //Store the Subcollection in firebase
     try {
       await addTokenToDb(
-        `${newMusicNft.collectionAddress}:${newMusicNft.tokenId}`,
+        `${newMusicNft.collectionAddress}-${newMusicNft.tokenId}`,
         nusicTokenData
       );
     } catch (e: any) {
