@@ -2,7 +2,7 @@ import axios from "axios";
 import { IZoraData } from "../types/Zora";
 import { tokensQuery } from "./queries";
 
-export const getMusicNFTMetadata = async (
+export const getNFTsMetadata = async (
   newTokens: { address: string; tokenId: string }[]
 ) => {
   // const response = await this.zoraClient.tokens({
@@ -13,7 +13,7 @@ export const getMusicNFTMetadata = async (
   const headers = {
     "content-type": "application/json",
   };
-  const tokensMetadata = [];
+  const tokensMetadata: { token: IZoraData }[] = [];
   let hasNextPage = false;
   let endCursor: string | null = null;
   do {
@@ -31,19 +31,12 @@ export const getMusicNFTMetadata = async (
       headers: headers,
       data: graphqlQuery,
     });
-    const audioFilteredNodes = response.data.data.tokens.nodes
-      .filter(
-        (node: any) =>
-          // !!node.token.metadata?.animation_url
-          node.token.tokenUrlMimeType?.split("/")[0] === "audio"
-        // "audio/mpeg" === node.token.tokenUrlMimeType
-        // ["VideoEncodingTypes", "AudioEncodingTypes"].includes(
-        //   node.token.content?.mediaEncoding?.__typename || ""
-        // )
-      )
-      .map((node: any) => node.token) as IZoraData[];
-
-    tokensMetadata.push(...audioFilteredNodes);
+    const nodes = response.data.data.tokens.nodes;
+    if (nodes?.length) {
+      tokensMetadata.push(...nodes);
+    } else {
+      break;
+    }
     hasNextPage = response.data.data.tokens.pageInfo.hasNextPage;
     endCursor = response.data.data.tokens.pageInfo.endCursor;
   } while (hasNextPage);

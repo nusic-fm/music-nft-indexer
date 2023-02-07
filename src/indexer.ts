@@ -3,7 +3,7 @@ import { RedisClientType } from "@redis/client";
 import { ZDK, ZDKNetwork, ZDKChain } from "@zoralabs/zdk";
 // import { MediaType } from "@zoralabs/zdk/dist/queries/queries-sdk";
 // import { tokensQuery } from "./helpers/queries";
-import axios from "axios";
+// import axios from "axios";
 // import path from "path";
 // import { MediaType } from "@zoralabs/zdk/dist/queries/queries-sdk";
 // import fetchAndUpload from "./services/storage";
@@ -11,14 +11,12 @@ import { createUrlFromCid } from "./helpers/nft";
 // import { EditionType, NusicSong } from "./types/NusicSong";
 import { addSongToDb, updateSongToDb } from "./services/db/songs.service";
 import { getNftTransfersFromBlock } from "./helpers/moralis";
-import { getMusicNFTMetadata } from "./helpers/zora";
+import { getNFTsMetadata } from "./helpers/zora";
 import { getNftSongData, getNusicNftModel, getNusicTokenData } from "./helpers";
-import {
-  addNftToDb,
-  addTokenToNftCollection,
-} from "./services/db/nfts.service";
+import { addNftToDb } from "./services/db/collections.service";
 import { IZoraData } from "./types/Zora";
 import { addAssetToDb } from "./services/db/assets.service";
+import { addTokenToDb } from "./services/db/tokens.service";
 const redis = require("redis");
 
 const networkInfo = {
@@ -35,6 +33,7 @@ const args = {
 const REDIS_KEYS = {
   noOfMusicNfts: "noOfMusicNfts",
   currentBlock: "currentBlock",
+  totalBlocksPassed: "totalBlocksPassed",
   tokenUri: "tokenUri",
   tokenId: "tokenId",
   songId: "songId",
@@ -42,8 +41,8 @@ const REDIS_KEYS = {
 
 export class MoralisIndexer {
   //15946075
-  public startBlock: number = 15945387;
-  public latestBlock: number = 15945387;
+  public startBlock: number = 16000000;
+  public latestBlock: number = 16000000;
   // public blocks = [
   //   11565108, 16488663, 16494452, 13916084, 16503323, 16157168, 16341506,
   //   15440562, 16503193, 16322023,
@@ -85,40 +84,23 @@ export class MoralisIndexer {
     tokens: { token_address: string; token_id: string }[]
   ) {
     const newTokens: { address: string; tokenId: string }[] = [];
-    // const sameAddressTokens: {
-    //   [key: string]: { tokenId: string; tokenUri: string; songId: string };
-    // } = {};
     for await (const token of tokens) {
       const address = token.token_address;
       const tokenId = token.token_id;
-      // Redis Implementation
-      // const key = address + "-" + tokenId;
-      // const isTokenExists = await this.redisClient.exists(key);
-      const redisTokenId = await this.redisClient.hGet(
-        address,
-        REDIS_KEYS.tokenId
-      );
-
-      if (redisTokenId) {
-        // Address already available, look for tokenId
-        if (redisTokenId === tokenId) continue;
-        newTokens.push({ address, tokenId });
-        // sameAddressTokens[address] = {
-        //   tokenId,
-        //   tokenUri: redisTokenUri as string,
-        //   songId,
-        // };
-        // If same token Id, it won't even be considered for next loop.
-
-        // Ignore
-      } else {
-        // New Address found
-        // await this.redisClient.hSet(address, REDIS_KEYS.tokenId, tokenId);
-        newTokens.push({ address, tokenId });
+      const isNonMusicNft = await this.redisClient.exists(address);
+      if (isNonMusicNft) {
+        continue;
       }
+      // Redis Implementation
+      const key = `${address}:${tokenId}`;
+      const isTokenAlreadyExists = await this.redisClient.exists(key);
+      if (isTokenAlreadyExists) {
+        continue;
+      }
+      newTokens.push({ address, tokenId });
     }
     console.log("Found", newTokens.length, "new nfts out of", tokens.length);
-    return { newTokens };
+    return newTokens;
   }
 
   async storeNft(newMusicNft: IZoraData) {
@@ -132,9 +114,8 @@ export class MoralisIndexer {
     const nusicTokenData = getNusicTokenData(newMusicNft);
     //Store the Subcollection in firebase
     try {
-      await addTokenToNftCollection(
-        newMusicNft.collectionAddress,
-        newMusicNft.tokenId,
+      await addTokenToDb(
+        `${newMusicNft.collectionAddress}:${newMusicNft.tokenId}`,
         nusicTokenData
       );
     } catch (e: any) {
@@ -148,9 +129,8 @@ export class MoralisIndexer {
     const nusicTokenData = getNusicTokenData(newMusicNft);
     //Store the Subcollection in firebase
     try {
-      await addTokenToNftCollection(
-        newMusicNft.collectionAddress,
-        newMusicNft.tokenId,
+      await addTokenToDb(
+        `${newMusicNft.collectionAddress}:${newMusicNft.tokenId}`,
         nusicTokenData
       );
     } catch (e: any) {
@@ -161,7 +141,7 @@ export class MoralisIndexer {
     }
   }
 
-  async storeSong(token: IZoraData) {
+  async storeSong(token: IZoraData): Promise<void> {
     const nftSongData = getNftSongData(token);
     const orginaAudiolUrl = await createUrlFromCid(token.content?.url ?? "");
     const audioSize = Math.round(Number(token.content?.size) / 1048576); // 1048576
@@ -171,7 +151,7 @@ export class MoralisIndexer {
     const lowQualityUrl = token.content?.mediaEncoding?.original;
 
     await this.redisClient.hSet(
-      nftSongData.tokenAddress,
+      `mnft:${nftSongData.tokenAddress}`,
       REDIS_KEYS.tokenUri,
       token.content?.url || ""
     );
@@ -183,8 +163,8 @@ export class MoralisIndexer {
         }. Original: ${!!orginaAudiolUrl}, Low: ${!!lowQualityUrl}`
       );
     }
-    nftSongData.audioContent.originalUrl = orginaAudiolUrl;
-    nftSongData.audioContent.streamUrl = lowQualityUrl;
+    nftSongData.nativeContent.audio.originalUrl = orginaAudiolUrl;
+    nftSongData.nativeContent.audio.streamUrl = lowQualityUrl;
     const assetObj: {
       tokenAddress: string;
       tokenId: string;
@@ -216,28 +196,14 @@ export class MoralisIndexer {
         imageSize: -1,
       },
     };
-    if (audioSize < 20) {
+    if (audioSize < 30) {
       if (orginaAudiolUrl) {
         assetObj.audioContent.originalUrl = orginaAudiolUrl;
-        // await fetchAndUpload(
-        //   orginalUrl,
-        //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/original`,
-        //   audioType
-        // );
       }
       if (lowQualityUrl) {
         assetObj.audioContent.streamUrl = lowQualityUrl;
-        // try {
-        //   // await fetchAndUpload(
-        //   //   lowQualityUrl,
-        //   //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/audio/stream-url`,
-        //   //   audioType
-        //   // );
-        // } catch (e: any) {
-        //   nftSongData.nativeAudioUrl = true;
-        //   console.log("Error in uploading audio file: ", e.message);
-        // }
       } else {
+        assetObj.audioContent.originalUrl = orginaAudiolUrl;
         //TODO: Convert to low quality
       }
       assetObj.audioContent.audioType = audioType;
@@ -249,30 +215,15 @@ export class MoralisIndexer {
     // Image
     const originalImageUrl = await createUrlFromCid(token.image?.url ?? "");
     const posterImageUrl = token.image?.mediaEncoding?.poster;
-    nftSongData.imageContent.originalUrl = originalImageUrl;
-    nftSongData.imageContent.posterUrl = posterImageUrl;
+    nftSongData.nativeContent.image.originalUrl = originalImageUrl;
+    nftSongData.nativeContent.image.posterUrl = posterImageUrl;
 
-    if (imageSize < 20) {
+    if (imageSize < 30) {
       if (originalImageUrl) {
         assetObj.imageContent.originalUrl = originalImageUrl;
-        // await fetchAndUpload(
-        //   originalImageUrl,
-        //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/original`,
-        //   imageType
-        // );
       }
       if (posterImageUrl) {
         assetObj.imageContent.posterUrl = posterImageUrl;
-        // try {
-        //   // await fetchAndUpload(
-        //   //   posterImageUrl,
-        //   //   `tokens/ethereum/1/${token.collectionAddress}/${token.tokenId}/image/poster`,
-        //   //   imageType
-        //   // );
-        // } catch (e: any) {
-        //   nftSongData.nativeAudioUrl = true;
-        //   console.log("Error in uploading image file: ", e.message);
-        // }
       }
     } else {
       nftSongData.nativeImageUrl = true;
@@ -282,7 +233,7 @@ export class MoralisIndexer {
     try {
       const songId = await addSongToDb(nftSongData);
       await this.redisClient.hSet(
-        token.collectionAddress,
+        `mnft:${nftSongData.tokenAddress}`,
         REDIS_KEYS.songId,
         songId
       );
@@ -296,12 +247,18 @@ export class MoralisIndexer {
   async handleMusicNft(newMusicNft: IZoraData) {
     const address = newMusicNft.collectionAddress;
     const tokenId = newMusicNft.tokenId;
-    const [redisTokenUri, redisTokenId, songId] = await this.redisClient.hmGet(
-      address,
-      [REDIS_KEYS.tokenUri, REDIS_KEYS.tokenId, REDIS_KEYS.songId]
+    const key = `${address}:${tokenId}`;
+
+    const isAlreadyLoaded = await this.redisClient.exists(key);
+    if (isAlreadyLoaded) return;
+    const isCollectionAlreadySaved = await this.redisClient.exists(
+      `mnft:${address}`
     );
-    if (redisTokenId) {
-      if (redisTokenId === tokenId) return;
+    if (isCollectionAlreadySaved) {
+      const [redisTokenUri, songId] = await this.redisClient.hmGet(
+        `mnft:${address}`,
+        [REDIS_KEYS.tokenUri, REDIS_KEYS.songId]
+      );
       await this.storeNftToken(newMusicNft);
       console.log("Token is stored for: ", address);
       if (newMusicNft.content?.url === redisTokenUri) {
@@ -313,19 +270,18 @@ export class MoralisIndexer {
             newMusicNft.tokenContract?.name ??
             newMusicNft.name
         );
-        // await this.redisClient.hSet(address, "songEdition", 'Single');
-        //hset songEdition
       } else {
-        console.log("Storing the song for: ", newMusicNft.tokenId);
+        console.log("Storing a new song for: ", newMusicNft.tokenId);
         await this.storeSong(newMusicNft);
-        // await this.redisClient.hSet(address, "songEdition", 'Multiple');
-        //hset songEdition
       }
     } else {
       await this.storeNft(newMusicNft);
-      console.log("Nft is stored for: ", address);
+      await this.redisClient.hSet(
+        `mnft:${address}`,
+        REDIS_KEYS.tokenId,
+        tokenId
+      );
       await this.storeSong(newMusicNft);
-      console.log("New Song is added for: ", address);
     }
   }
 
@@ -336,12 +292,15 @@ export class MoralisIndexer {
   }
 
   async start() {
-    // TODO: Node Cluster
     // let i = this.latestBlock;
     while (this.latestBlock > 0) {
       // this.i -= 1;
       // this.latestBlock = this.blocks[this.i];
-      this.redisClient.set(REDIS_KEYS.currentBlock, this.latestBlock);
+      await this.redisClient.set(REDIS_KEYS.currentBlock, this.latestBlock);
+      await this.redisClient.set(
+        REDIS_KEYS.totalBlocksPassed,
+        this.startBlock - this.latestBlock
+      );
       console.log(
         "Block: ",
         this.latestBlock,
@@ -351,13 +310,21 @@ export class MoralisIndexer {
       try {
         const nftTransfers = await getNftTransfersFromBlock(this.latestBlock);
         if (nftTransfers.length) {
-          const { newTokens } = await this.identifyNewNftsFromRedis(
-            nftTransfers
-          );
+          const newTokens = await this.identifyNewNftsFromRedis(nftTransfers);
           if (newTokens.length) {
             // Find music NFTs
             try {
-              const newMusicNfts = await getMusicNFTMetadata(newTokens);
+              const metadataNodes = await getNFTsMetadata(newTokens);
+              const newMusicNfts = [];
+              for (const node of metadataNodes) {
+                const token = node.token as IZoraData;
+                if (node.token.tokenUrlMimeType?.split("/")[0] === "audio") {
+                  newMusicNfts.push(node.token as IZoraData);
+                } else {
+                  // non-music nfts
+                  await this.redisClient.set(token.collectionAddress, 0);
+                }
+              }
               console.log("No of Music NFTs found: ", newMusicNfts.length);
               if (newMusicNfts.length) {
                 for (const newMusicNft of newMusicNfts) {
@@ -368,12 +335,10 @@ export class MoralisIndexer {
                     newMusicNft.tokenId
                   );
                   await this.handleMusicNft(newMusicNft);
-                  await this.redisClient.hSet(
-                    newMusicNft.collectionAddress,
-                    REDIS_KEYS.tokenId,
-                    newMusicNft.tokenId
+                  await this.redisClient.set(
+                    `${newMusicNft.collectionAddress}:${newMusicNft.tokenId}`,
+                    0
                   );
-                  // await this.destructDataFromNft(musicNft, sameAddressTokens);
                 }
               }
             } catch (e: any) {
@@ -397,113 +362,3 @@ export class MoralisIndexer {
     }
   }
 }
-// MORALIS implementation:
-
-// const metadata = await Moralis.EvmApi.nft.getNFTMetadata({
-//   address,
-//   tokenId,
-//   chain,
-// });
-
-// const tokenUri = metadata?.result.tokenUri;
-// if (tokenUri) {
-//   getAudioDataFromNft(tokenUri);
-// }
-
-// async destructDataFromNft(
-//   musicNft: any,
-//   sameAddressTokens: {
-//     [key: string]: { tokenId: string; tokenUri: string; updated: boolean };
-//   }
-// ) {
-//   console.time();
-//   const token = musicNft.token;
-//   // let editionType: EditionType = "Unknown";
-//   // if (!sameAddressTokens[token.address]) {
-//   //   await this.redisClient.hSet(token.address, "tokenUri", token.tokenUrl);
-//   // } else if (token.tokenUrl === sameAddressTokens[token.address].tokenUri) {
-//   //   editionType = "Multiple";
-//   // } else {
-//   //   editionType = "Single";
-//   // }
-//   const newSong: NusicSong = getNusicSongModel(token, editionType);
-//   //TODO: Metadata Attributes
-//   // Music
-//   if (editionType === "Unknown" || editionType === "Multiple") {
-//     const orginalUrl = token.content?.url;
-//     const lowQualityUrl = token.content?.mediaEncoding?.original;
-
-//     if (!orginalUrl || !lowQualityUrl) {
-//       console.log(
-//         `Url not found for: ${token.collectionAddress} - ${
-//           token.tokenId
-//         }. Original: ${!!orginalUrl}, Low: ${!!lowQualityUrl}`
-//       );
-//     }
-//     if (orginalUrl) {
-//       const url = await createUrlFromCid(orginalUrl);
-//       await fetchAndUpload(
-//         url,
-//         `tokens/${token.collectionAddress}/${token.tokenId}/audio/original`,
-//         "audio/mp3"
-//       );
-//       newSong.audioContent.originalUrl = `${token.collectionAddress}/${token.tokenId}`;
-//     }
-//     if (lowQualityUrl) {
-//       await fetchAndUpload(
-//         lowQualityUrl,
-//         `tokens/${token.collectionAddress}/${token.tokenId}/audio/stream-url`,
-//         "audio/mp3"
-//       );
-//       newSong.audioContent.streamUrl = `${token.collectionAddress}/${token.tokenId}`;
-//     } else {
-//       // Convert to low quality
-//     }
-
-//     // Image
-//     const originalImageUrl = token.image?.url;
-//     if (originalImageUrl) {
-//       const url = await createUrlFromCid(originalImageUrl);
-//       await fetchAndUpload(
-//         url,
-//         `tokens/${token.collectionAddress}/${token.tokenId}/image/original`,
-//         "image/png"
-//       );
-//       newSong.imageContent.originalUrl = `${token.collectionAddress}/${token.tokenId}`;
-//     }
-//   } else {
-//     newSong.audioContent.originalUrl = `${token.collectionAddress}/${
-//       sameAddressTokens[token.address].tokenId
-//     }`;
-//     newSong.audioContent.streamUrl = `${token.collectionAddress}/${
-//       sameAddressTokens[token.address].tokenId
-//     }`;
-//     newSong.imageContent.originalUrl = `${token.collectionAddress}/${
-//       sameAddressTokens[token.address].tokenId
-//     }`;
-
-//     //UPDATE previous record once
-//     await updateSongToDb(
-//       token.address,
-//       sameAddressTokens[token.address].tokenId,
-//       editionType
-//     );
-//   }
-
-//   // Save row
-//   try {
-//     await addSongToDb(newSong);
-//     console.log(
-//       `Successfully saved: ${newSong.tokenAddress}: ${newSong.tokenId}`
-//     );
-//     this.musicNFTsLength += 1;
-//     console.timeEnd();
-//     console.log(
-//       "No of Music NFTs loaded after 976 blocks: ",
-//       this.musicNFTsLength
-//     );
-//   } catch (err: any) {
-//     console.log(newSong);
-//     console.log(`DB Error: `, err.message);
-//   }
-// }

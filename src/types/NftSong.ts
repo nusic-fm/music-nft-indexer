@@ -2,12 +2,15 @@ import { AudioContent, EditionType, ImageContent, MintInfo } from "./NusicSong";
 
 export interface NftSong {
   name?: string | null;
+  collectionName?: string | null;
   description?: string | null;
   symbol?: string | null;
   tokenAddress: string;
   tokenId: string;
-  audioContent: AudioContent;
-  imageContent: ImageContent;
+  nativeContent: {
+    audio: AudioContent;
+    image: ImageContent;
+  };
   nativeAudioUrl: boolean;
   nativeImageUrl: boolean;
   owner?: string | null;

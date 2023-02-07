@@ -1,3 +1,4 @@
+import { arrayUnion } from "firebase/firestore";
 import { NftCollectionData, NftTokenData } from "../types/NftData";
 import { NftSong } from "../types/NftSong";
 import { EditionType, NusicSong } from "../types/NusicSong";
@@ -8,15 +9,18 @@ export const getNftSongData = (token: IZoraData): NftSong => ({
   name: token.name,
   description: token.description,
   tokenAddress: token.collectionAddress,
+  collectionName: token.collectionName,
   tokenId: token.tokenId,
   owner: token.owner,
-  audioContent: {
-    originalUrl: "",
-    streamUrl: "",
-  },
-  imageContent: {
-    originalUrl: "",
-    posterUrl: "",
+  nativeContent: {
+    audio: {
+      originalUrl: "",
+      streamUrl: "",
+    },
+    image: {
+      originalUrl: "",
+      posterUrl: "",
+    },
   },
   nativeAudioUrl: false,
   nativeImageUrl: false,
@@ -35,6 +39,7 @@ export const getNusicNftModel = (token: IZoraData): NftCollectionData => ({
   tokenUri: token.tokenUrl ?? null,
   contractType: (token as any).tokenStandard ?? null,
   ownerAddress: token.owner ?? null,
+  tokenIds: arrayUnion(token.tokenId),
 });
 
 export const getNusicTokenData = (token: any): NftTokenData => ({

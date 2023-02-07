@@ -1,3 +1,4 @@
+import { FieldValue } from "firebase/firestore";
 import { AudioContent, ImageContent, MintInfo } from "./NusicSong";
 
 export interface NftCollectionData {
@@ -8,6 +9,7 @@ export interface NftCollectionData {
   symbol?: string | null;
   contractType: "ERC721" | "ERC1155";
   tokenUri?: string | null;
+  tokenIds?: FieldValue;
 }
 
 export interface NftTokenData {
