@@ -15,7 +15,7 @@ export interface IZoraData {
   };
   content?: {
     mediaEncoding?: {
-      poster?: string | null;
+      large?: string | null;
       original?: string | null;
     };
     mimeType?: string | null;

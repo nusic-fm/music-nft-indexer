@@ -148,7 +148,7 @@ export class MoralisIndexer {
     const imageSize = Math.round(Number(token.image?.size) / 1048576);
     const audioType = token.content?.mimeType ?? "audio/mpeg";
     const imageType = token.image?.mimeType ?? "image/png";
-    const lowQualityUrl = token.content?.mediaEncoding?.original;
+    const lowQualityUrl = token.content?.mediaEncoding?.large;
 
     await this.redisClient.hSet(
       `mnft:${nftSongData.tokenAddress}`,
@@ -165,52 +165,6 @@ export class MoralisIndexer {
     }
     nftSongData.nativeContent.audio.originalUrl = orginaAudiolUrl;
     nftSongData.nativeContent.audio.streamUrl = lowQualityUrl;
-    const assetObj: {
-      tokenAddress: string;
-      tokenId: string;
-      audioContent: {
-        originalUrl: string;
-        streamUrl: string;
-        audioType: string;
-        audioSize: number;
-      };
-      imageContent: {
-        originalUrl: string;
-        posterUrl: string;
-        imageType: string;
-        imageSize: number;
-      };
-    } = {
-      tokenAddress: nftSongData.tokenAddress,
-      tokenId: nftSongData.tokenId,
-      audioContent: {
-        originalUrl: "",
-        streamUrl: "",
-        audioType: "",
-        audioSize: -1,
-      },
-      imageContent: {
-        originalUrl: "",
-        posterUrl: "",
-        imageType: "",
-        imageSize: -1,
-      },
-    };
-    assetObj.audioContent.audioType = audioType;
-    assetObj.audioContent.audioSize = audioSize;
-    if (audioSize < 30) {
-      if (orginaAudiolUrl) {
-        assetObj.audioContent.originalUrl = orginaAudiolUrl;
-      }
-      if (lowQualityUrl) {
-        assetObj.audioContent.streamUrl = lowQualityUrl;
-      } else {
-        assetObj.audioContent.originalUrl = orginaAudiolUrl;
-        //TODO: Convert to low quality
-      }
-    } else {
-      nftSongData.nativeAudioUrl = true;
-    }
 
     // Image
     const originalImageUrl = await createUrlFromCid(token.image?.url ?? "");
@@ -218,18 +172,41 @@ export class MoralisIndexer {
     nftSongData.nativeContent.image.originalUrl = originalImageUrl;
     nftSongData.nativeContent.image.posterUrl = posterImageUrl;
 
-    assetObj.imageContent.imageType = imageType;
-    assetObj.imageContent.imageSize = imageSize;
-    if (imageSize < 30) {
-      if (originalImageUrl) {
-        assetObj.imageContent.originalUrl = originalImageUrl;
-      }
-      if (posterImageUrl) {
-        assetObj.imageContent.posterUrl = posterImageUrl;
-      }
-    } else {
-      nftSongData.nativeImageUrl = true;
-    }
+    const assetObj: {
+      tokenAddress: string;
+      tokenId: string;
+      audioSize: number;
+      imageSize: number;
+      audioContent: {
+        originalUrl: string;
+        streamUrl?: string | null;
+        audioType: string;
+        audioSize: number;
+      };
+      imageContent: {
+        originalUrl: string;
+        posterUrl?: string | null;
+        imageType: string;
+        imageSize: number;
+      };
+    } = {
+      tokenAddress: nftSongData.tokenAddress,
+      tokenId: nftSongData.tokenId,
+      audioSize,
+      imageSize,
+      audioContent: {
+        originalUrl: orginaAudiolUrl,
+        streamUrl: lowQualityUrl,
+        audioType,
+        audioSize,
+      },
+      imageContent: {
+        originalUrl: originalImageUrl,
+        posterUrl: posterImageUrl,
+        imageType,
+        imageSize,
+      },
+    };
     try {
       const songId = await addSongToDb(nftSongData);
       await this.redisClient.hSet(
