@@ -40,17 +40,8 @@ const REDIS_KEYS = {
 };
 
 export class MoralisIndexer {
-  //15946075
   public startBlock: number = 16000000;
   public latestBlock: number = 16000000;
-  // public blocks = [
-  //   11565108, 16488663, 16494452, 13916084, 16503323, 16157168, 16341506,
-  //   15440562, 16503193, 16322023,
-  // ];
-  // public i = this.blocks.length;
-  // NFTs: 16411983
-  // last stop: 16411995 -> 16411573 -> 16411543
-  public musicNFTsLength: number = 0;
   public redisClient: RedisClientType = redis.createClient({
     socket: {
       host: process.env.REDIS_HOST,
@@ -144,8 +135,8 @@ export class MoralisIndexer {
   async storeSong(token: IZoraData): Promise<void> {
     const nftSongData = getNftSongData(token);
     const orginaAudiolUrl = await createUrlFromCid(token.content?.url ?? "");
-    const audioSize = Math.round(Number(token.content?.size) / 1048576); // 1048576
-    const imageSize = Math.round(Number(token.image?.size) / 1048576);
+    const audioSize = Number(token.content?.size) ?? -1; //Math.round(Number(token.content?.size) / 1048576); // 1048576
+    const imageSize = Number(token.image?.size) ?? -1; //Math.round(Number(token.image?.size) / 1048576);
     const audioType = token.content?.mimeType ?? "audio/mpeg";
     const imageType = token.image?.mimeType ?? "image/png";
     const lowQualityUrl = token.content?.mediaEncoding?.large;
