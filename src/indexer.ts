@@ -17,6 +17,7 @@ import { addNftToDb } from "./services/db/collections.service";
 import { IZoraData } from "./types/Zora";
 import { addAssetToDb } from "./services/db/assets.service";
 import { addTokenToDb } from "./services/db/tokens.service";
+import { logError } from "./services/db/errors.service";
 const redis = require("redis");
 
 const networkInfo = {
@@ -100,7 +101,12 @@ export class MoralisIndexer {
     try {
       await addNftToDb(newMusicNft.collectionAddress, nusicNftModel);
     } catch (e: any) {
-      console.log("Error while saving NFT collection: ", e.message);
+      await logError(
+        this.latestBlock,
+        e.message,
+        "Error while saving NFT collection"
+      );
+      // console.log("Error while saving NFT collection: ", e.message);
     }
     const nusicTokenData = getNusicTokenData(newMusicNft);
     //Store the Subcollection in firebase
@@ -110,10 +116,11 @@ export class MoralisIndexer {
         nusicTokenData
       );
     } catch (e: any) {
-      console.log(
-        "Error while saving Token in NFT sub-collection: ",
-        e.message
-      );
+      await logError(this.latestBlock, e.message, "Error while saving Token");
+      // console.log(
+      //   "Error while saving Token in NFT sub-collection: ",
+      //   e.message
+      // );
     }
   }
   async storeNftToken(newMusicNft: IZoraData) {
@@ -125,10 +132,11 @@ export class MoralisIndexer {
         nusicTokenData
       );
     } catch (e: any) {
-      console.log(
-        "Error while saving Token in NFT sub-collection: ",
-        e.message
-      );
+      await logError(this.latestBlock, e.message, "Error while saving Token");
+      // console.log(
+      //   "Error while saving Token in NFT sub-collection: ",
+      //   e.message
+      // );
     }
   }
 
@@ -208,7 +216,8 @@ export class MoralisIndexer {
       await addAssetToDb(songId, assetObj);
       await this.redisClient.incr(REDIS_KEYS.noOfMusicNfts);
     } catch (e: any) {
-      console.log("Error in addSongDb/assets: ", e.message);
+      await logError(this.latestBlock, e.message, "Error in addSongDb/assets");
+      // console.log("Error in addSongDb/assets: ", e.message);
     }
   }
 
@@ -310,7 +319,12 @@ export class MoralisIndexer {
                 }
               }
             } catch (e: any) {
-              console.log("Handling Error: ", e.message);
+              await logError(
+                this.latestBlock,
+                e.message,
+                "Handling/Zora Error"
+              );
+              // console.log("Handling Error: ", e.message);
             } finally {
               this.latestBlock -= 1;
             }
@@ -321,11 +335,13 @@ export class MoralisIndexer {
           this.latestBlock -= 1;
         }
       } catch (err: any) {
-        console.log(
-          "Error with moralis api at block",
-          this.latestBlock,
-          err.message
-        );
+        await logError(this.latestBlock, err.message, "Error with moralis api");
+        this.latestBlock = -1;
+        // console.log(
+        //   "Error with moralis api at block",
+        //   this.latestBlock,
+        //   err.message
+        // );
       }
     }
   }
