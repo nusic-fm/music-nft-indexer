@@ -42,7 +42,7 @@ const REDIS_KEYS = {
 
 export class MoralisIndexer {
   public startBlock: number = 16000000;
-  public latestBlock: number = 16000000;
+  public latestBlock: number = 15000000;
   public redisClient: RedisClientType = redis.createClient({
     socket: {
       host: process.env.REDIS_HOST,
@@ -50,6 +50,7 @@ export class MoralisIndexer {
     },
   });
   public zoraClient: ZDK;
+  public breakCounter: number = 0;
 
   constructor(latestBlock?: number) {
     if (latestBlock) {
@@ -68,6 +69,9 @@ export class MoralisIndexer {
   async getMusicNftsCount(): Promise<string | null> {
     return this.redisClient.get(REDIS_KEYS.noOfMusicNfts);
   }
+  async getPassedBlocks(): Promise<string | null> {
+    return this.redisClient.get(REDIS_KEYS.totalBlocksPassed);
+  }
   async getCurrentBlock(): Promise<string | null> {
     return this.redisClient.get(REDIS_KEYS.currentBlock);
   }
@@ -79,10 +83,10 @@ export class MoralisIndexer {
     for await (const token of tokens) {
       const address = token.token_address;
       const tokenId = token.token_id;
-      const isNonMusicNft = await this.redisClient.exists(address);
-      if (isNonMusicNft) {
-        continue;
-      }
+      // const isNonMusicNft = await this.redisClient.exists(address);
+      // if (isNonMusicNft) {
+      //   continue;
+      // }
       // Redis Implementation
       const key = `${address}:${tokenId}`;
       const isTokenAlreadyExists = await this.redisClient.exists(key);
@@ -96,7 +100,7 @@ export class MoralisIndexer {
   }
 
   async storeNft(newMusicNft: IZoraData) {
-    const nusicNftModel = getNusicNftModel(newMusicNft);
+    const nusicNftModel = getNusicNftModel(newMusicNft, this.latestBlock);
     //Store NFT record in firebase
     try {
       await addNftToDb(newMusicNft.collectionAddress, nusicNftModel);
@@ -108,7 +112,7 @@ export class MoralisIndexer {
       );
       // console.log("Error while saving NFT collection: ", e.message);
     }
-    const nusicTokenData = getNusicTokenData(newMusicNft);
+    const nusicTokenData = getNusicTokenData(newMusicNft, this.latestBlock);
     //Store the Subcollection in firebase
     try {
       await addTokenToDb(
@@ -124,7 +128,7 @@ export class MoralisIndexer {
     }
   }
   async storeNftToken(newMusicNft: IZoraData) {
-    const nusicTokenData = getNusicTokenData(newMusicNft);
+    const nusicTokenData = getNusicTokenData(newMusicNft, this.latestBlock);
     //Store the Subcollection in firebase
     try {
       await addTokenToDb(
@@ -141,7 +145,7 @@ export class MoralisIndexer {
   }
 
   async storeSong(token: IZoraData): Promise<void> {
-    const nftSongData = getNftSongData(token);
+    const nftSongData = getNftSongData(token, this.latestBlock);
     const orginaAudiolUrl = await createUrlFromCid(token.content?.url ?? "");
     const audioSize = Number(token.content?.size) ?? -1; //Math.round(Number(token.content?.size) / 1048576); // 1048576
     const imageSize = Number(token.image?.size) ?? -1; //Math.round(Number(token.image?.size) / 1048576);
@@ -176,6 +180,7 @@ export class MoralisIndexer {
       tokenId: string;
       audioSize: number;
       imageSize: number;
+      blockNo: number;
       audioContent: {
         originalUrl: string;
         streamUrl?: string | null;
@@ -188,6 +193,7 @@ export class MoralisIndexer {
         imageType: string;
         imageSize: number;
       };
+      loaded: boolean;
     } = {
       tokenAddress: nftSongData.tokenAddress,
       tokenId: nftSongData.tokenId,
@@ -205,6 +211,8 @@ export class MoralisIndexer {
         imageType,
         imageSize,
       },
+      loaded: false,
+      blockNo: this.latestBlock,
     };
     try {
       const songId = await addSongToDb(nftSongData);
@@ -224,10 +232,10 @@ export class MoralisIndexer {
   async handleMusicNft(newMusicNft: IZoraData) {
     const address = newMusicNft.collectionAddress;
     const tokenId = newMusicNft.tokenId;
-    const key = `${address}:${tokenId}`;
+    // const key = `${address}:${tokenId}`;
 
-    const isAlreadyLoaded = await this.redisClient.exists(key);
-    if (isAlreadyLoaded) return;
+    // const isAlreadyLoaded = await this.redisClient.exists(key);
+    // if (isAlreadyLoaded) return;
     const isCollectionAlreadySaved = await this.redisClient.exists(
       `mnft:${address}`
     );
@@ -287,6 +295,7 @@ export class MoralisIndexer {
       try {
         const nftTransfers = await getNftTransfersFromBlock(this.latestBlock);
         if (nftTransfers.length) {
+          this.breakCounter = 0;
           const newTokens = await this.identifyNewNftsFromRedis(nftTransfers);
           if (newTokens.length) {
             // Find music NFTs
@@ -299,7 +308,7 @@ export class MoralisIndexer {
                   newMusicNfts.push(node.token as IZoraData);
                 } else {
                   // non-music nfts
-                  await this.redisClient.set(token.collectionAddress, 0);
+                  // await this.redisClient.set(token.collectionAddress, 0);
                 }
               }
               console.log("No of Music NFTs found: ", newMusicNfts.length);
@@ -314,7 +323,7 @@ export class MoralisIndexer {
                   await this.handleMusicNft(newMusicNft);
                   await this.redisClient.set(
                     `${newMusicNft.collectionAddress}:${newMusicNft.tokenId}`,
-                    0
+                    this.latestBlock
                   );
                 }
               }
@@ -336,7 +345,12 @@ export class MoralisIndexer {
         }
       } catch (err: any) {
         await logError(this.latestBlock, err.message, "Error with moralis api");
-        this.latestBlock = -1;
+        if (this.breakCounter === 5) {
+          this.latestBlock = -1;
+        } else {
+          this.breakCounter += 1;
+        }
+        // this.latestBlock = -1;
         // console.log(
         //   "Error with moralis api at block",
         //   this.latestBlock,

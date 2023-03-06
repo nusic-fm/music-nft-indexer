@@ -10,6 +10,7 @@ export interface NftCollectionData {
   contractType: "ERC721" | "ERC1155";
   tokenUri?: string | null;
   tokenIds?: FieldValue;
+  blockNo: number;
 }
 
 export interface NftTokenData {
@@ -40,4 +41,5 @@ export interface NftTokenData {
   bpm?: string | null;
   key?: string | null;
   genre?: string | null;
+  blockNo: number;
 }

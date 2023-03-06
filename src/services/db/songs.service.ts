@@ -17,7 +17,7 @@ import { NftSong } from "../../types/NftSong";
 // import { NusicSong } from "../../types/NusicSong";
 import { db } from "../firebase.service";
 
-const DB_NAME = "songs";
+const DB_NAME = "tracks";
 
 const addSongToDb = async (song: NftSong): Promise<string> => {
   const d = collection(db, DB_NAME);

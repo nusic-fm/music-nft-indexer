@@ -5,7 +5,7 @@ import { EditionType, NusicSong } from "../types/NusicSong";
 import { IZoraData } from "../types/Zora";
 import { createUrlFromCid, getDataFromCid, getFileFormatFromUrl } from "./nft";
 
-export const getNftSongData = (token: IZoraData): NftSong => ({
+export const getNftSongData = (token: IZoraData, blockNo: number): NftSong => ({
   name: token.name,
   description: token.description,
   tokenAddress: token.collectionAddress,
@@ -30,9 +30,13 @@ export const getNftSongData = (token: IZoraData): NftSong => ({
   bpm: (token.metadata as any)?.bpm || "",
   key: (token.metadata as any)?.key || "",
   tokenIds: [token.tokenId],
+  blockNo,
 });
 
-export const getNusicNftModel = (token: IZoraData): NftCollectionData => ({
+export const getNusicNftModel = (
+  token: IZoraData,
+  blockNo: number
+): NftCollectionData => ({
   name: token.tokenContract?.name ?? token.name ?? null,
   description: token.tokenContract?.description ?? token.description ?? null,
   symbol: token.tokenContract?.symbol ?? null,
@@ -40,9 +44,13 @@ export const getNusicNftModel = (token: IZoraData): NftCollectionData => ({
   contractType: (token as any).tokenStandard ?? null,
   ownerAddress: token.owner ?? null,
   tokenIds: arrayUnion(token.tokenId),
+  blockNo,
 });
 
-export const getNusicTokenData = (token: any): NftTokenData => ({
+export const getNusicTokenData = (
+  token: any,
+  blockNo: number
+): NftTokenData => ({
   name: token.name,
   description: token.description,
   tokenAddress: token.collectionAddress,
@@ -73,6 +81,7 @@ export const getNusicTokenData = (token: any): NftTokenData => ({
   bpm: token.metadata?.bpm ?? null,
   key: token.metadata?.key ?? null,
   genre: token.metadata?.genre ?? null,
+  blockNo,
 });
 
 export const getNusicSongModel = (

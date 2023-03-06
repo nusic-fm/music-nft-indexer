@@ -18,4 +18,5 @@ export interface NftSong {
   bpm?: string | null;
   key?: string | null;
   tokenIds: string[];
+  blockNo: number;
 }

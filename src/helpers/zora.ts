@@ -31,14 +31,14 @@ export const getNFTsMetadata = async (
       headers: headers,
       data: graphqlQuery,
     });
-    const nodes = response.data.data.tokens.nodes;
+    const nodes = response.data.data?.tokens.nodes;
     if (nodes?.length) {
       tokensMetadata.push(...nodes);
     } else {
       break;
     }
-    hasNextPage = response.data.data.tokens.pageInfo.hasNextPage;
-    endCursor = response.data.data.tokens.pageInfo.endCursor;
+    hasNextPage = response.data.data?.tokens.pageInfo.hasNextPage;
+    endCursor = response.data.data?.tokens.pageInfo.endCursor;
   } while (hasNextPage);
 
   return tokensMetadata;
